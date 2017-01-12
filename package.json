@@ -25,5 +25,8 @@
       "type": "MIT",
       "url": "http://opensource.org/licenses/MIT"
     }
-  ]
+  ],
+  "dependencies": {
+    "immutable": "^3.8.1"
+  }
 }

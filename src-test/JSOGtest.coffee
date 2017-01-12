@@ -34,8 +34,8 @@ describe 'duplicate references', ->
 		assert decoded.inside1 == decoded.inside2
 	it 'should have inside1.name', ->
 		assert decoded.inside1.name == 'thing'
-	it 'should not have an @id', ->
-		assert !(decoded['@id']?)
+	it 'should not have an __ksId', ->
+		assert !(decoded['__ksId']?)
 
 describe 'cyclic references', ->
 	circular = {}
@@ -46,13 +46,13 @@ describe 'cyclic references', ->
 	console.log "Encoded: " + JSON.stringify(encoded, undefined, 4)
 
 	it 'should have an encoded id', ->
-		assert encoded['@id']?
+		assert encoded['__ksId']?
 	it 'should have resolved references', ->
-		assert encoded.me['@ref'] == encoded['@id']
+		assert encoded.me['__ksRef'] == encoded['__ksId']
 	it 'me is decoded', ->
 		assert decoded.me is decoded
 	it 'is not circular', ->
-		assert !(circular['@id']?)
+		assert !(circular['__ksId']?)
 
 describe 'nulls', ->
 	it 'should leave null by itself alone', ->
@@ -62,7 +62,7 @@ describe 'nulls', ->
 		foo = { foo: null }
 		encoded = JSOG.encode(foo)
 
-		assert encoded['@id']?
+		assert encoded['__ksId']?
 		assert encoded.foo == null
 
 describe 'arrays', ->
@@ -72,8 +72,8 @@ describe 'arrays', ->
 
 		encoded = JSOG.encode(array)
 
-		assert encoded[0]['@id']?
-		assert encoded[0]['@id'] == encoded[1]['@ref']
+		assert encoded[0]['__ksId']?
+		assert encoded[0]['__ksId'] == encoded[1]['__ksRef']
 
 describe 'custom json serialization', ->
 	it 'should leave objects with toJSON methods alone', ->

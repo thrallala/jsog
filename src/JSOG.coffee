@@ -5,13 +5,15 @@
 
 JSOG = {}
 
+Immutable = require '../immutable/dist/immutable.min'
+
 nextId = 0
 
 # Older browser compatibility
 isArray = Array.isArray || (obj) -> Object.prototype.toString.call(obj) == '[object Array]'
 
 # True if the object has a toJSON method
-hasCustomJsonificaiton = (obj) -> obj.toJSON?
+hasCustomJsonification = (obj) -> obj.toJSON? || obj.toJS?
 
 JSOG_OBJECT_ID = '__jsogObjectId'
 
@@ -22,7 +24,7 @@ JSOG_OBJECT_ID = '__jsogObjectId'
 # Note that this modifies the original objects adding __jsogObjectId fields and leaves
 # them there. There does not appear to be another way to define object identity in JS.
 #
-JSOG.encode = (original, idProperty = '@id', refProperty = '@ref') ->
+JSOG.encode = (original, idProperty = '__ksId', refProperty = '__ksRef') ->
 	#console.log "encoding #{JSON.stringify(original)}"
 
 	sofar = {}
@@ -52,7 +54,26 @@ JSOG.encode = (original, idProperty = '@id', refProperty = '@ref') ->
 
 		if !original?
 			return original
-		else if hasCustomJsonificaiton(original)
+		else if Immutable.Iterable.isIterable(original)
+			entries = original.entries()
+			mapObject = []
+			console.log(original + ' ITERABLE')
+			while(entries.next())
+				if(entries.value.length && entries.value.length > 1)
+					mapObject.push({
+						'key': entries.value[0],
+						'value': entries.value[1]
+					})
+				else if(entries.value.length && entries.value.length == 1)
+					mapObject.push({
+						'value': entries.value[0]
+					})
+				else
+					mapObject.push({
+						'value': entries.value
+					})
+			return encodeObject(mapObject)
+		else if hasCustomJsonification(original)
 			return original
 		else if isArray(original)
 			return encodeArray(original)
@@ -67,7 +88,7 @@ JSOG.encode = (original, idProperty = '@id', refProperty = '@ref') ->
 # Take a JSOG-encoded JSON structure and re-link all the references. The return value will
 # not have any @id or @ref fields
 #
-JSOG.decode = (encoded, idProperty = '@id', refProperty = '@ref') ->
+JSOG.decode = (encoded, idProperty = '__ksId', refProperty = '__ksRef') ->
 	# Holds every @id found so far.
 	found = {}
 
