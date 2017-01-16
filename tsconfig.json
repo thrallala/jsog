@@ -10,7 +10,17 @@
     "sourceMap": true,
     "inlineSources": true,
     "strictNullChecks": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "preserveConstEnums": true,
+    "declaration": true,
+    "listFiles": true,
+    "diagnostics": true,
+    "noResolve": false,
+    "suppressImplicitAnyIndexErrors": true,
+    "noEmitOnError": true,
+    "emitDecoratorMetadata":true,
+    "experimentalDecorators":true,
+    "strictNullChecks": false
   },
   "include": [
     "src/**/*"
