@@ -6,7 +6,7 @@ export module JSOG {
   let nextId = 0;
 
   function isArray(obj: any) {
-    Array.isArray(obj) || Object.prototype.toString.call(obj) === '[object Array]';
+    return Array.isArray(obj) || Object.prototype.toString.call(obj) === '[object Array]';
   }
 
   function hasCustomJsonification(obj: any) {
@@ -23,7 +23,7 @@ export module JSOG {
       return obj[JSOG_OBJECT_ID];
     };
     doEncode = function (original) {
-      var encodeArray, encodeObject, entries, mapObject;
+      var encodeArray, encodeObject;
       encodeObject = function (original) {
         var id, key, obj1, obj2, result, value;
         id = idOf(original);
