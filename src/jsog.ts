@@ -1,4 +1,5 @@
 import Immutable from 'immutable';
+import { TypeMapper } from './typeMap';
 
 export namespace JSOG {
 
@@ -57,6 +58,7 @@ export namespace JSOG {
     }
     else {
       encodedObject[idProperty] = id;
+      encodedObject = TypeMapper.getTypeName(original);
       sofar[id] = encodedObject;
       for (let key in original) {
         if (key !== JSOG_OBJECT_ID) {
@@ -86,7 +88,10 @@ export namespace JSOG {
         iterableObject.push({key: key, value: value});
       }
     );
-    return doEncode(iterableObject, idProperty, refProperty, sofar);
+
+    let wrapperObject = {value: iterableObject};
+    wrapperObject[TypeMapper.__typeProperty] = TypeMapper.getTypeName(original);
+    return doEncode(wrapperObject, idProperty, refProperty, sofar);
   }
 
   export function encode(original, idProperty = '@id', refProperty = '@ref') {
