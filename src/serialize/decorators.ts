@@ -50,7 +50,7 @@ export function InheritSerializable(parentType: Function): any {
 export function serialize(target: any, keyName: string): any {
   if (!target || !keyName) return;
 
-  let className = TypeMapper.getTypeName(target).type;
+  let className = TypeMapper.extractTypeName(target).type;
   if(className) {
     let typeData = TypeMapper.__ksTypeMap.get(className);
     if (!typeData) {

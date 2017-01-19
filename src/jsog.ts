@@ -1,9 +1,8 @@
 import Immutable from 'immutable';
 import { TypeMapper, IterableWrapper, KeyValuePair } from './serialize/typeMap';
 
-export namespace JSOG {
+export namespace Serializer {
 
-  import __typeProperty = TypeMapper.__typeProperty;
   let JSOG_OBJECT_ID = '__jsogObjectId';
   let nextId = 0;
 
@@ -16,17 +15,8 @@ export namespace JSOG {
   }
 
   function isSpecialIterableType(obj: any) {
-
-    let typeName = obj[TypeMapper.__typeProperty];
-    if (typeName && typeName.startsWith(TypeMapper.__immutableTypePrefix) && (!obj.constructor || obj.constructor !== IterableWrapper)) {
-      return true;
-    }
-
-    return Immutable.Iterable.isIterable(obj)
-      || obj instanceof Set
-      || obj instanceof Map;
+    return TypeMapper.isSpecialType(obj);
   }
-
 
   function idOf(obj: any) {
     if (!obj[JSOG_OBJECT_ID]) {
@@ -60,13 +50,12 @@ export namespace JSOG {
     }
     else {
       encodedObject[idProperty] = id;
-      let typeName = TypeMapper.getTypeName(original).type;
+      let typeName = TypeMapper.extractTypeName(original).type;
       if (typeName) {
         encodedObject[TypeMapper.__typeProperty] = typeName;
       }
       sofar[id] = encodedObject;
 
-      // if(TypeMapper.__ksPropertyMap)keySet
       let serializableProps;
       if (typeName !== 'Object') {
         let typeData = TypeMapper.__ksTypeMap.get(typeName)
@@ -110,7 +99,7 @@ export namespace JSOG {
   };
 
   function encodeIterable(original, idProperty = '@id', refProperty = '@ref', sofar = {}) {
-    let iterableObject: Array<{key?: any, value: any}> = [];
+    let iterableObject: Array<KeyValuePair> = [];
     original.forEach(
       (value, key) => {
         iterableObject.push(new KeyValuePair(key, value));
@@ -118,7 +107,7 @@ export namespace JSOG {
     );
 
     let wrapperObject = new IterableWrapper(iterableObject);
-    wrapperObject[TypeMapper.__typeProperty] = TypeMapper.getTypeName(original).type;
+    wrapperObject[TypeMapper.__typeProperty] = TypeMapper.extractTypeName(original).type;
     return doEncode(wrapperObject, idProperty, refProperty, sofar);
   }
 

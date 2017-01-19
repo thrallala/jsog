@@ -1,5 +1,5 @@
-import { JSOG } from './jsog';
+import { Serializer } from './jsog';
 
-export { JSOG }
+export { Serializer }
 export * from './serialize/typeMap'
 export * from './serialize/decorators'

@@ -10,7 +10,6 @@ export class KeyValuePair {
   }
 }
 
-
 export class TypeData {
 
   public properties = new Set<string>();
@@ -65,10 +64,9 @@ export namespace TypeMapper {
       }
     );
   }
-
   changeTypePrefix('JS');
 
-  export function getTypeName(object): any {
+  export function extractTypeName(object): any {
 
     if (typeof object !== 'object') {
       return {type: undefined};
@@ -97,15 +95,18 @@ export namespace TypeMapper {
 
   }
 
-  export function setExplicitTypeName(object) {
-    if (typeof object !== 'object') {
-      return;
-    }
-    object[__typeProperty] = getTypeName(object).type;
-    return object;
-  }
-
   export function getTypeForName(typeName: string) {
     return __ksTypeMap.get(typeName);
+  }
+
+  export function isSpecialType(obj: any) {
+    let typeName = obj[TypeMapper.__typeProperty];
+    if (typeName && typeName.startsWith(TypeMapper.__immutableTypePrefix) && (!obj.constructor || obj.constructor !== IterableWrapper)) {
+      return true;
+    }
+
+    return Immutable.Iterable.isIterable(obj)
+      || obj instanceof Set
+      || obj instanceof Map;
   }
 }
