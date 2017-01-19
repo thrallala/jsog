@@ -1,17 +1,49 @@
-# typescript-library-boilerplate
+## Serializer for typescript based on cerialize and JSOG
 
-[![Build Status](https://img.shields.io/travis/maxdavidson/typescript-library-boilerplate/master.svg)](https://travis-ci.org/maxdavidson/typescript-library-boilerplate)
-[![Coverage Status](https://img.shields.io/coveralls/maxdavidson/typescript-library-boilerplate/master.svg)](https://coveralls.io/github/maxdavidson/typescript-library-boilerplate?branch=master)
-[![Dependency Status](https://img.shields.io/david/maxdavidson/typescript-library-boilerplate.svg)](https://david-dm.org/maxdavidson/typescript-library-boilerplate)
-[![devDependency Status](https://img.shields.io/david/dev/maxdavidson/typescript-library-boilerplate.svg)](https://david-dm.org/maxdavidson/typescript-library-boilerplate?type=dev)
+Works based on annotations
+* @Serializable - it will find the correct type when deserializing
+* @InheritSerializable(parent) - inherits the parent's properties when serializing
+* @serialize - only serialize certain properties marked with this annotation. If none are marked, it will serialize everything
 
-Opinionated boilerplate for TypeScript 2.0 libraries.
+ex.
+```
+@Serializable
+export class TestClass1 {
+
+  @serialize public x: string;
+  @serialize public y: any;
+  @serialize public z: number;
+
+  public arr = [1,2,3];
+  public obj = {'plr': 'plt'};
 
 
-## Features
+  @serialize public immutableJStest : Map<string, TestClass>;
 
-* [TypeScript 2.0](http://www.typescriptlang.org)
-* Code quality with [tslint](http://palantir.github.io/tslint/)
-* Module bundling with [Rollup](http://rollupjs.org)
-* Unit testing with [Jest](https://github.com/facebook/jest)
-* Continuous integration with [Travis](https://travis-ci.org)
+  constructor(plm, plz = 2, immutableJStest?) {
+    this.p = this;
+    this.plm = plm;
+    this.plz = plz;
+
+    if(immutableJStest) {
+      this.immutableJStest = immutableJStest;
+    }
+  }
+
+  testFunction() {
+    console.log('testFunction');
+  }
+
+}
+
+@InheritSerializable(TestClass1)
+export class TestClass extends TestClass1 {
+
+  @serialize public xzy = 3;
+
+  constructor(x: string, plz = 2, immutableJStest?){
+    super(x, plz, immutableJStest);
+  }
+
+}
+```

@@ -1,12 +1,18 @@
 {
-  "name": "jsog-ts",
-  "version": "0.2.5",
-  "description": "JSOG in ts",
-  "author": "thrallala, Max Davidson <davidsonmax@gmail.com>",
+  "name": "serializer-ts",
+  "version": "0.5.0",
+  "description": "serializer for ts + immutableJS objects",
+  "authors": [
+    "Max Davidson <davidsonmax@gmail.com> - typescript boilerplate",
+    "Matt Weichselbaum - cerialize",
+    "Jeff Schnitzer <jeff@infohazard.org> - JSOG",
+    "Jon Stevens <latchkey@gmail.com> - JSOG",
+    "thrallala"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jsog/jsog.git"
+    "url": "https://github.com/thrallala/jsog.git"
   },
   "engines": {
     "npm": ">=3.0.0"
@@ -35,7 +41,10 @@
     "typescript",
     "lib",
     "library",
-    "jsog"
+    "jsog",
+    "serialize",
+    "types",
+    "javascript"
   ],
   "files": [
     "dist"
