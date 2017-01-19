@@ -1,8 +1,9 @@
 import Immutable from 'immutable';
-import { TypeMapper } from './typeMap';
+import { TypeMapper, IterableWrapper, KeyValuePair } from './serialize/typeMap';
 
 export namespace JSOG {
 
+  import __typeProperty = TypeMapper.__typeProperty;
   let JSOG_OBJECT_ID = '__jsogObjectId';
   let nextId = 0;
 
@@ -14,17 +15,18 @@ export namespace JSOG {
     return (obj.toJSON != null) || (obj.toJS != null);
   }
 
-  function isImmutableJS(obj: any){
-    return Immutable.Iterable.isIterable(obj);
+  function isSpecialIterableType(obj: any) {
+
+    let typeName = obj[TypeMapper.__typeProperty];
+    if (typeName && typeName.startsWith(TypeMapper.__immutableTypePrefix) && (!obj.constructor || obj.constructor !== IterableWrapper)) {
+      return true;
+    }
+
+    return Immutable.Iterable.isIterable(obj)
+      || obj instanceof Set
+      || obj instanceof Map;
   }
 
-  function isSet(obj: any){
-    return obj instanceof Set;
-  }
-
-  function isMap(obj: any){
-    return obj instanceof Map;
-  }
 
   function idOf(obj: any) {
     if (!obj[JSOG_OBJECT_ID]) {
@@ -36,7 +38,7 @@ export namespace JSOG {
   function doEncode(original: any, idProperty = '@id', refProperty = '@ref', sofar = {}) {
     if (original == null) {
       return {encodedObject: original, sofar};
-    } else if (isImmutableJS(original) || isMap(original) || isSet(original)) {
+    } else if (isSpecialIterableType(original)) {
       return encodeIterable(original, idProperty, refProperty, sofar);
     } else if (hasCustomJsonification(original)) {
       return {encodedObject: original, sofar};
@@ -58,22 +60,48 @@ export namespace JSOG {
     }
     else {
       encodedObject[idProperty] = id;
-      encodedObject = TypeMapper.getTypeName(original);
+      let typeName = TypeMapper.getTypeName(original).type;
+      if (typeName) {
+        encodedObject[TypeMapper.__typeProperty] = typeName;
+      }
       sofar[id] = encodedObject;
-      for (let key in original) {
-        if (key !== JSOG_OBJECT_ID) {
-          let result = doEncode(original[key], idProperty, refProperty, sofar);
-          sofar = result.sofar;
-          encodedObject[key] = result.encodedObject;
+
+      // if(TypeMapper.__ksPropertyMap)keySet
+      let serializableProps;
+      if (typeName !== 'Object') {
+        let typeData = TypeMapper.__ksTypeMap.get(typeName)
+        if (typeData) {
+          serializableProps = TypeMapper.__ksTypeMap.get(typeName).properties;
+        } else {
+          serializableProps = new Set<string>();
+        }
+      } else {
+        serializableProps = new Set<string>();
+      }
+      if (!serializableProps.size) {
+        for (let key in original) {
+          serializableProps.add(key);
         }
       }
+      serializableProps.forEach(key => {
+        if (key !== JSOG_OBJECT_ID) {
+          let property = original[key];
+          if (property) {
+            let result = doEncode(original[key], idProperty, refProperty, sofar);
+            sofar = result.sofar;
+            encodedObject[key] = result.encodedObject;
+          }
+        }
+      });
+
+
     }
     return {encodedObject, sofar};
   };
 
   function encodeArray(original, idProperty = '@id', refProperty = '@ref', sofar = {}) {
     let encodedObject = [];
-    original.forEach( element => {
+    original.forEach(element => {
       let result = doEncode(element, idProperty, refProperty, sofar);
       sofar = result.sofar;
       encodedObject.push(result.encodedObject);
@@ -85,12 +113,12 @@ export namespace JSOG {
     let iterableObject: Array<{key?: any, value: any}> = [];
     original.forEach(
       (value, key) => {
-        iterableObject.push({key: key, value: value});
+        iterableObject.push(new KeyValuePair(key, value));
       }
     );
 
-    let wrapperObject = {value: iterableObject};
-    wrapperObject[TypeMapper.__typeProperty] = TypeMapper.getTypeName(original);
+    let wrapperObject = new IterableWrapper(iterableObject);
+    wrapperObject[TypeMapper.__typeProperty] = TypeMapper.getTypeName(original).type;
     return doEncode(wrapperObject, idProperty, refProperty, sofar);
   }
 
@@ -98,39 +126,102 @@ export namespace JSOG {
     return doEncode(original, idProperty, refProperty, {}).encodedObject;
   };
 
-  function decodeObject (encoded, idProperty = '@id', refProperty = '@ref', found = {}) {
+  function decodeObject(encoded, idProperty = '@id', refProperty = '@ref', found = {}, type?) {
     let ref = encoded[refProperty];
     ref = ref != null ? ref.toString() : ref;
     if (ref != null) {
       return found[ref];
     }
 
-    let decodedObject = {};
+    let serializableProps;
+    let decodedObject;
+    let typeName = encoded[TypeMapper.__typeProperty];
+    if (typeName && typeName !== 'Object') {
+      let typeData = TypeMapper.getTypeForName(typeName);
+      if (typeData) {
+        decodedObject = new (<any>typeData.constr)();
+        serializableProps = typeData.properties;
+      }
+      else {
+        serializableProps = new Set<string>();
+      }
+    }
+    else {
+      serializableProps = new Set<string>();
+    }
+
+    if (!serializableProps.size) {
+      for (let key in encoded) {
+        serializableProps.add(key);
+      }
+    }
+
+    if (!decodedObject) {
+      decodedObject = {}
+    }
+
     let id = encoded[idProperty];
     id = id != null ? id.toString() : id;
     if (id) {
       found[id] = decodedObject;
     }
-    for (let key in encoded) {
+    serializableProps.forEach(key => {
       if (key !== idProperty) {
-        decodedObject[key] = doDecode(encoded[key], idProperty, refProperty, found);
+        let decodedEntry = doDecode(encoded[key], idProperty, refProperty, found);
+        if (decodedEntry) {
+          decodedObject[key] = doDecode(encoded[key], idProperty, refProperty, found);
+        }
       }
-    }
+    });
     return decodedObject;
   };
 
-  function decodeArray (encoded, idProperty = '@id', refProperty = '@ref', found = {}) {
+  function decodeArray(encoded, idProperty = '@id', refProperty = '@ref', found = {}) {
     let decodedObject = [];
-    encoded.forEach( element => {
+    encoded.forEach(element => {
       let result = doDecode(element, idProperty, refProperty, found);
       decodedObject.push(result);
     });
     return decodedObject;
   };
 
-  function doDecode (encoded, idProperty = '@id', refProperty = '@ref', found = {}) {
+  function decodeIterable(encoded, idProperty = '@id', refProperty = '@ref', found = {}) {
+    let valuesArray = [];
+
+    encoded.values.forEach(element => {
+      let result = doDecode(element, idProperty, refProperty, found);
+      if (result.key)
+        valuesArray.push(result.key);
+      if (result.value)
+        valuesArray.push(result.value);
+    });
+
+    let typeData = TypeMapper.getTypeForName(encoded[TypeMapper.__typeProperty])
+
+    switch (typeData.constr) {
+      case Immutable.List:
+      case Immutable.Map:
+      case Immutable.OrderedMap:
+      case Immutable.Set:
+      case Immutable.OrderedSet:
+      case Immutable.Stack:
+      case Immutable.Record:
+      case Immutable.Seq:
+        return (<any>typeData.constr).of(...valuesArray);
+      case Map:
+        return new Map(valuesArray);
+      case Set:
+        return new Set(valuesArray);
+      default:
+        throw new Error(`Unsupported Iterable type: ${typeData.constr}`);
+    }
+  };
+
+  function doDecode(encoded, idProperty = '@id', refProperty = '@ref', found = {}) {
     if (encoded == null) {
       return encoded;
+    } else if (isSpecialIterableType(encoded)) {
+      return decodeIterable(encoded, idProperty, refProperty, found);
     } else if (isArray(encoded)) {
       return decodeArray(encoded, idProperty, refProperty, found);
     } else if (typeof encoded === 'object') {

@@ -1,11 +1,33 @@
 import Immutable from 'immutable';
 
-export namespace TypeMapper {
-  export let __ksTypeMap: Map<string, Function> = new Map<string, Function>();
-  export let __typeProperty = 'cType';
+export class IterableWrapper {
+  constructor(public values: Array<any>) {
+  }
+}
 
-  let iterableNamesMap = new Map<Function, string>();
-  let jsNamesMap = new Map<Function, string>();
+export class KeyValuePair {
+  constructor(public key: any, public value: any) {
+  }
+}
+
+
+export class TypeData {
+
+  public properties = new Set<string>();
+
+  constructor(public readonly typeName: string,
+              public constr?: Function) {
+  }
+
+}
+
+export namespace TypeMapper {
+  export let __ksTypeMap: Map<string, TypeData> = new Map<string, TypeData>();
+  export let __typeProperty = 'cType';
+  export let __immutableTypePrefix = 'JS';
+
+  export let iterableNamesMap = new Map<Function, string>();
+  export let jsNamesMap = new Map<Function, string>();
 
   export function changeTypePrefix(newPrefix: string) {
     iterableNamesMap.forEach(
@@ -34,21 +56,22 @@ export namespace TypeMapper {
 
     iterableNamesMap.forEach(
       (value, key) => {
-        __ksTypeMap.set(value, key);
+        __ksTypeMap.set(value, new TypeData(value, key));
       }
     );
     jsNamesMap.forEach(
       (value, key) => {
-        __ksTypeMap.set(value, key);
+        __ksTypeMap.set(value, new TypeData(value, key));
       }
     );
   }
+
   changeTypePrefix('JS');
 
-  export function getTypeName(object) {
+  export function getTypeName(object): any {
 
     if (typeof object !== 'object') {
-      return;
+      return {type: undefined};
     }
 
     if (object[__typeProperty]) {
@@ -70,7 +93,7 @@ export namespace TypeMapper {
       return {type: object.constructor.name};
     }
 
-    return {type: 'Object'};
+    return {type: 'object'};
 
   }
 
@@ -78,20 +101,11 @@ export namespace TypeMapper {
     if (typeof object !== 'object') {
       return;
     }
-    object[__typeProperty] = getTypeName(object);
+    object[__typeProperty] = getTypeName(object).type;
     return object;
   }
 
   export function getTypeForName(typeName: string) {
     return __ksTypeMap.get(typeName);
   }
-}
-
-export function Serializable(target: Function) {
-  let constr = target;
-  let className = target.name;
-  if (TypeMapper.__ksTypeMap.get(className)) {
-    throw new Error(`Classname ${className} not unique!`);
-  }
-  TypeMapper.__ksTypeMap.set(className, constr);
 }
